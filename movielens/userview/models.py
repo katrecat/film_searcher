@@ -12,6 +12,7 @@ class Genre(models.Model):
 class Movie(models.Model):
     title = models.CharField(max_length=1000)
     genres = models.ManyToManyField(Genre)
+    imdb_index = 0
     def __str__(self):
         return self.title
 
