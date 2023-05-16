@@ -65,7 +65,7 @@ def register_request(request):
             user = form.save()
             login(request, user)
             messages.success(request, "Registration successful." )
-            return redirect("home")
+            return redirect("/")
             messages.error(request, "Unsuccessful registration. Invalidinformation.")
     return render (request=request, template_name="userview/register.html", context={"register_form":form})
 
@@ -90,7 +90,7 @@ def user_login(request):
         if user is not None:
             auth_login(request, user)
             messages.success(request, 'Login successful.')
-            return redirect('home')
+            return redirect('/')
         else:
             messages.error(request, 'Invalid username or password.')
     return render(request, 'userview/login.html')
@@ -98,7 +98,7 @@ def user_login(request):
 def logout_request(request):
     logout(request)
     messages.success(request, 'Logout successful.')
-    return redirect('home')
+    return redirect('/')
 
 def ratings(request):
     if request.user.is_authenticated:
