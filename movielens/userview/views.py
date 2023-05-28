@@ -16,6 +16,36 @@ def index(request: HttpRequest):
     return HttpResponse(template.render(context, request))
 
 
+def edit_movie(request: HttpRequest, movie_id):
+    if request.method == 'POST':
+        title = request.POST.get('title')
+        genres = request.POST.getlist('genres')
+        movie = Movie.objects.get(id=movie_id)
+        # Verify that the genres are correct
+        if genres and title:
+            movie.title = title
+            movie.genres.clear()
+            for genre in genres:
+                movie.genres.add(Genre.objects.get(id=genre))
+            movie.save()
+        return redirect(f'/movie/{movie_id}')
+    else:
+        template = loader.get_template('userview/edit_movie.html')
+        try:
+            movie = Movie.objects.get(id=movie_id)
+        except Movie.DoesNotExist:
+            return HttpResponse(template.render({'movie': None,
+                                                 'movie_id': movie_id},
+                                                request))
+        try:
+            genres = Genre.objects.all()
+        except Genre.DoesNotExist:
+            genres = []
+        return HttpResponse(template.render({'movie': movie,
+                                             'movie_id': movie_id,
+                                             'genres': genres}, request))
+
+
 def view_movie(request: HttpRequest, movie_id):
     if request.method == 'POST':
         comment = request.POST.get('comment')

@@ -11,4 +11,5 @@ urlpatterns = [
     path("login/", views.user_login, name="login"),
     path('logout/', views.logout_request, name='logout'),
     path('ratings/', views.ratings, name='ratings'),
+    path('edit-movie/<int:movie_id>', views.edit_movie, name='edit_movie'),
 ]
