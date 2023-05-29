@@ -16,21 +16,66 @@ def index(request: HttpRequest):
     return HttpResponse(template.render(context, request))
 
 
+def create_movie(request: HttpRequest):
+    template = loader.get_template('userview/create_movie.html')
+    all_genres = Genre.objects.all()
+    all_genres = sorted(all_genres, key=lambda x: x.name)
+
+    if request.method == 'POST':
+        title = request.POST.get('title')
+        genres = request.POST.getlist('genres')
+        if genres and title:
+            try:
+                movie = Movie.objects.get(title=title)
+                return HttpResponse(template.render({"error":
+                                                     "Movie already exists.",
+                                                     "title": title,
+                                                     "genres":
+                                                     all_genres},
+                                                    request))
+
+            except Movie.DoesNotExist:
+                movie = Movie.objects.create(title=title)
+                for genre in genres:
+                    movie.genres.add(Genre.objects.get(id=genre))
+                movie.save()
+                return redirect(f'/movie/{movie.id}')
+    else:
+        return HttpResponse(template.render({"error": "",
+                                             "genres": all_genres},
+                                            request))
+
+
 def edit_movie(request: HttpRequest, movie_id):
+    template = loader.get_template('userview/edit_movie.html')
     if request.method == 'POST':
         title = request.POST.get('title')
         genres = request.POST.getlist('genres')
         movie = Movie.objects.get(id=movie_id)
         # Verify that the genres are correct
         if genres and title:
+            # Check if the movie already exists
+            try:
+                tmp_movie = Movie.objects.get(title=title)
+                # If the movie already exists, check if it is the same movie
+                if movie.id != tmp_movie.id:
+                    error_msg = f"Movie '{title}' already exists."
+                    return HttpResponse(
+                            template.render({"error": error_msg,
+                                             "movie": movie,
+                                             "movie_id": movie_id,
+                                             "genres": Genre.objects.all()},
+                                            request))
+
+            except Movie.DoesNotExist:
+                pass
             movie.title = title
             movie.genres.clear()
             for genre in genres:
                 movie.genres.add(Genre.objects.get(id=genre))
             movie.save()
-        return redirect(f'/movie/{movie_id}')
+            return redirect(f'/movie/{movie_id}')
     else:
-        template = loader.get_template('userview/edit_movie.html')
         try:
             movie = Movie.objects.get(id=movie_id)
         except Movie.DoesNotExist:
@@ -50,7 +95,8 @@ def view_movie(request: HttpRequest, movie_id):
     if request.method == 'POST':
         comment = request.POST.get('comment')
         movie = Movie.objects.get(id=movie_id)
-        comment = Comment.objects.create(text=comment, movie=movie, user=request.user)
+        comment = Comment.objects.create(text=comment, movie=movie,
+                                         user=request.user)
         comment.save()
         return redirect(f'/movie/{movie_id}')
     else:
@@ -59,7 +105,8 @@ def view_movie(request: HttpRequest, movie_id):
             movie = Movie.objects.get(id=movie_id)
         except Movie.DoesNotExist:
             return HttpResponse(template.render({'movie': None,
-                                                 'movie_id': movie_id}, request))
+                                                 'movie_id': movie_id},
+                                                request))
         context = {'movie': movie,
                    'movie_id': movie_id,
                    }
@@ -84,7 +131,8 @@ def view_movie(request: HttpRequest, movie_id):
         if request.user.is_authenticated:
             try:
                 user_rating = 0
-                user_ratings = Rating.objects.filter(movie=movie, user=request.user)
+                user_ratings = Rating.objects.filter(movie=movie,
+                                                     user=request.user)
                 if user_ratings:
                     for rating in user_ratings:
                         user_rating += rating.value
