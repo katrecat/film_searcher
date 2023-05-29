@@ -34,9 +34,21 @@
                 <li class="nav-item {% if request.path == '/' %}active{% endif %}">
                     <a class="nav-link" href="/">Home</a>
                 </li>
+                {% if user.is_authenticated and user.is_superuser %}
+                <li class="nav-item dropdown {% if request.path == '/movies/' %}active{% endif %}">
+                    <a class="nav-link dropdown-toggle" href="#" id="dropdown01" role="button" data-bs-toggle="dropdown"
+                        aria-expanded="false">Movies</a>
+                    <ul class="dropdown-menu" aria-labelledby="dropdown01"
+                        style="margin-top: 10px; background-color: #212529;">
+                        <li><a class="dropdown-item" href="/movies" style="color: white;">List</a></li>
+                        <li><a class="dropdown-item" href="/movies/create" style="color: white;">Create</a></li>
+                    </ul>
+                </li>
+                {% else %}
                 <li class="nav-item {% if request.path == '/movies/' %}active{% endif %}">
                     <a class="nav-link" href="/movies">Movies</a>
                 </li>
+                {% endif %}
                 <li class="nav-item {% if request.path == '/genres/' %}active{% endif %}">
                     <a class="nav-link" href="/genres">Genres</a>
                 </li>
