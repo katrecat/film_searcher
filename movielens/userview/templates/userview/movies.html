@@ -5,47 +5,209 @@ Movie List
 {% endblock %}
 
 {% block content %}
-<div class="jumbotron" style="text-align: center;">
-    <div class="starter-template">
-        <p></p>
-        <h1 class="display-5">Movie List</h1>
-        {% if movies %}
-        <ul class="list-group" style="margin:20px 0">
-            {% for movie in movies %}
-            <li class="list-group-item"><a href="/movie/{{ movie.id }}">{{ movie.title }}</a></li>
-            {% endfor %}
-        </ul>
-        {% else %}
-        <p class="center">No movies are available.</p>
-        {% endif %}
+        <div class="jumbotron" style="text-align: center;">
+            <div class="starter-template">
+                <p></p>
+                <h1 class="display-5">Movie List</h1>
+                <form method="GET" action="/movies/" class="mb-4">
+                    <div class="form-row justify-content-center">
+                        <div class="col-md-3 mb-2">
+                            <input type="text" class="form-control" name="title" placeholder="Title" {% if request.GET.title %}value="{{ request.GET.title }}"{% endif %}>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <input type="text" class="form-control" id="genre-search" placeholder="Search Genre" onkeyup="searchGenre()">
+                            <div id="selected-genres">
+                                {% for selected_genre_id in request.GET.genre %}
+                                    {% for genre in genres %}
+                                        {% if genre.id == selected_genre_id %}
+                                            <span class="badge badge-info">{{ genre.name }}</span>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endfor %}
+                            </div>
+                            <select class="form-control" name="genre" multiple>
+                                {% for genre in genres %}
+                                    <option value="{{ genre.id }}" {% if request.GET.genre and genre.id in request.GET.genre %}selected{% endif %}>{{ genre.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-3 mb-2">
+                            <input type="number" class="form-control" name="average_rating" placeholder="Rating" min="0" max="10" {% if request.GET.rating %}value="{{ request.GET.rating }}"{% endif %}>
+                        </div>
+                        <div class="col-md-2 mb-2">
+                            <button type="submit" class="btn btn-primary">Search</button>
+                        </div>
+                    </div>
+                </form>
+                <div class="mb-4">
+                    <label for="view-chooser">View: </label>
+                    <select id="view-chooser" class="form-control" onchange="changeView(this.value)">
+                        <option value="table">Table</option>
+                        <option value="cards">Cards</option>
+                        <option value="list">List</option>
+                    </select>
+                </div>
+                <div id="movie-view" data-view="table">
+                    <table class="table movie-table">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Genres</th>
+                                <th>Rating</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for movie in movies %}
+                                <tr>
+                                    <td><a href="/movie/{{ movie.id }}">{{ movie.title }}</a></td>
+                                    <td>
+                                        {% for genre in movie.genres.all %}
+                                            {{ genre.name }},
+                                        {% empty %}
+                                            –
+                                        {% endfor %}
+                                    </td>
+                                    <td>
+                                        {{ movie.average_rating }}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    <div class="row movie-cards" style="display: none;">
+                        {% for movie in movies %}
+                            <div class="col-md-4">
+                                <div class="card mb-4">
+                                    <div class="card-body">
+                                        <h5 class="card-title"><a href="/movie/{{ movie.id }}">{{ movie.title }}</a></h5>
+                                        <p class="card-text"><strong>Genres:</strong>
+                                            {% for genre in movie.genres.all %}
+                                                {{ genre.name }},
+                                            {% empty %}
+                                                –
+                                            {% endfor %}
+                                        </p>
+                                        <p class="card-text"><strong>Rating:</strong> {{ movie.average_rating }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <ul class="list-group movie-list" style="display: none;">
+                        {% for movie in movies %}
+                            <li class="list-group-item"><a href="/movie/{{ movie.id }}">{{ movie.title }}</a> - Genres:
+                                {% for genre in movie.genres.all %}
+                                    {{ genre.name }},
+                                {% empty %}
+                                    –
+                                {% endfor %}
+                                , Rating: {{ movie.average_rating }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                
+                {% if pagination %}
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination justify-content-center">
+                            {% if pagination.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?{{ query_string }}&page={{ pagination.previous_page_number }}&view={{ current_view }}">Previous</a>
+                                </li>
+                            {% endif %}
+                            {% for num in pagination.paginator.page_range %}
+                                {% if num == pagination.number %}
+                                    <li class="page-item active">
+                                        <a class="page-link" href="?{{ query_string }}&page={{ num }}&view={{ current_view }}">{{ num }}</a>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?{{ query_string }}&page={{ num }}&view={{ current_view }}">{{ num }}</a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                            {% if pagination.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?{{ query_string }}&page={{ pagination.next_page_number }}&view={{ current_view }}">Next</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                {% endif %}
+            
 
-        {% if pagination %}
-        <nav aria-label="Page navigation">
-            <ul class="pagination justify-content-center" style="margin:20px 0">
-                {% if pagination.has_previous %}
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ pagination.previous_page_number }}">Previous</a>
-                </li>
-                {% endif %}
-                {% for num in pagination.paginator.page_range %}
-                {% if num == pagination.number %}
-                <li class="page-item active">
-                    <a class="page-link" href="?page={{ num }}">{{ num }}</a>
-                </li>
-                {% else %}
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ num }}">{{ num }}</a>
-                </li>
-                {% endif %}
-                {% endfor %}
-                {% if pagination.has_next %}
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ pagination.next_page_number }}">Next</a>
-                </li>
-                {% endif %}
-            </ul>
-        </nav>
-        {% endif %}
-    </div>
-</div>
-{% endblock %}
+            </div>
+        </div>
+
+    <script>
+        function changeView(view) {
+            const movieView = document.getElementById('movie-view');
+            movieView.setAttribute('data-view', view);
+            updateView();
+        }
+
+        function updateView() {
+            const movieView = document.getElementById('movie-view');
+            const selectedView = movieView.getAttribute('data-view');
+            const table = movieView.querySelector('.movie-table');
+            const cards = movieView.querySelector('.movie-cards');
+            const list = movieView.querySelector('.movie-list');
+
+            // Update the display property based on the selected view
+            if (selectedView === 'table') {
+                table.style.display = 'table';
+                cards.style.display = 'none';
+                list.style.display = 'none';
+            } else if (selectedView === 'cards') {
+                table.style.display = 'none';
+                cards.style.display = 'flex';
+                list.style.display = 'none';
+            } else if (selectedView === 'list') {
+                table.style.display = 'none';
+                cards.style.display = 'none';
+                list.style.display = 'block';
+            }
+        }
+
+        // Add an event listener to the view chooser
+        const viewChooser = document.getElementById('view-chooser');
+        viewChooser.addEventListener('change', function() {
+            const selectedView = viewChooser.value;
+            changeView(selectedView);
+        });
+
+        updateView();
+
+    </script>
+
+    <script>
+        function searchGenre() {
+            const searchInput = document.getElementById('genre-search');
+            const selectedGenres = document.getElementById('selected-genres');
+            const genreOptions = document.querySelectorAll('select[name="genre"] option');
+
+            const searchTerm = searchInput.value.toLowerCase();
+
+            // Wyświetlanie/w ukrywanie opcji gatunku na podstawie wyszukiwanego terminu
+            genreOptions.forEach(option => {
+                const genreName = option.textContent.toLowerCase();
+                if (genreName.includes(searchTerm)) {
+                    option.style.display = 'block';
+                } else {
+                    option.style.display = 'none';
+                }
+            });
+
+            // Wyświetlanie/w ukrywanie wybranych gatunków
+            const selectedGenresList = selectedGenres.querySelectorAll('.badge');
+            selectedGenresList.forEach(genre => {
+                const genreName = genre.textContent.toLowerCase();
+                if (genreName.includes(searchTerm)) {
+                    genre.style.display = 'inline-block';
+                } else {
+                    genre.style.display = 'none';
+                }
+            });
+        }
+    </script>
+    {% endblock %}
