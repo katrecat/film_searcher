@@ -7,6 +7,8 @@ from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 from django.template import loader
 from django.views import generic
+from urllib.parse import urlencode
+from django.db.models import Avg
 
 
 def index(request: HttpRequest):
@@ -157,20 +159,79 @@ def view_genre(request: HttpRequest, genre_id):
     response = 'you are looking at the genre with an id %s'
     return HttpResponse(response % genre_id)
 
+def movies_view(request):
+    movies = Movie.objects.order_by('-title')
 
-def movies_view(request: HttpRequest):
-    movie_list = Movie.objects.order_by('-title')
-    paginator = Paginator(movie_list, 3)  # Show n movies per page
+    title = request.GET.get('title')
+    if title:
+        movies = movies.filter(title__icontains=title)
 
-    page_number = request.GET.get('page')
-    movies = paginator.get_page(page_number)
+    genre_ids = request.GET.getlist('genre')
+    if genre_ids:
+        movies = movies.filter(genres__id__in=genre_ids)
 
-    template = loader.get_template('userview/movies.html')
-    context = {
-        'movies': movies,
-        'pagination': movies,
-    }
-    return HttpResponse(template.render(context, request))
+    average_rating = request.GET.get('average_rating')
+    if average_rating:
+        filtered_movies = []
+        for movie in movies:
+            try:
+                ratings = Rating.objects.filter(movie=movie)
+                if ratings:
+                    average_rating_sum = sum(rating.value for rating in ratings)
+                    average_rating_value = average_rating_sum / len(ratings)
+                    if average_rating_value >= float(average_rating):
+                        filtered_movies.append(movie)
+            except Rating.DoesNotExist:
+                pass
+        movies = filtered_movies
+
+    view = request.GET.get('view')
+    if view == 'table':
+        # Render grid view
+        paginator = Paginator(movies, 3)  # Show n movies per page
+
+        page_number = request.GET.get('page')
+        movies = paginator.get_page(page_number)
+
+        genres = Genre.objects.all()  #
+    else:
+        # Render list view with pagination
+        paginator = Paginator(movies, 3)  # Show n movies per page
+
+        page_number = request.GET.get('page')
+        movies = paginator.get_page(page_number)
+
+        genres = Genre.objects.all()  # Retrieve all genres from the database
+
+        # Calculate average rating for each movie
+        for movie in movies:
+            try:
+                ratings = Rating.objects.filter(movie=movie)
+                if ratings:
+                    average_rating_sum = sum(rating.value for rating in ratings)
+                    average_rating_value = average_rating_sum / len(ratings)
+                    average_rating = round(average_rating_value, 2)
+                    average_rating = f"{average_rating}"
+                else:
+                    average_rating = "No ratings yet."
+            except Rating.DoesNotExist:
+                average_rating = "No ratings yet."
+            movie.average_rating = average_rating
+
+        # Preserve the filter parameters in the pagination links
+        filter_params = request.GET.copy()
+        if 'page' in filter_params:
+            del filter_params['page']
+        query_string = filter_params.urlencode()
+
+        context = {
+            'movies': movies,
+            'genres': genres,
+            'pagination': movies,
+            'current_view': view,
+            'query_string': query_string,
+        }
+        return render(request, 'userview/movies.html', context)
 
 
 def genres_view(request: HttpRequest):
